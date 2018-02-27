@@ -19,6 +19,14 @@ RSpec.describe Valkyrie::ChangeSet do
   end
   subject(:change_set) { ResourceChangeSet.new(Resource.new) }
 
+  describe ".validators_on" do
+    it "the class responds to validators_on" do
+      expect(described_class).to respond_to(:validators_on)
+      expect(ResourceChangeSet.validators_on(:title)).to contain_exactly ActiveModel::Validations::PresenceValidator
+      expect(ResourceChangeSet.validators_on(:files)).to eq []
+    end
+  end
+
   it "can set an append_id" do
     change_set.append_id = Valkyrie::ID.new("test")
     expect(change_set.append_id).to eq Valkyrie::ID.new("test")
