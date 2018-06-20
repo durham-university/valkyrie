@@ -13,14 +13,14 @@ jobs:
             sudo mv ~/docker-compose /usr/local/bin/docker-compose
       - restore_cache:
          keys:
-           - bundle-{{ checksum "Gemfile" }}-{{ checksum "valkyrie.gemspec" }}
+           - bundle-{{ checksum "Gemfile" }}-{{ checksum "valkyrie.gemspec" }}-2
            - bundle- # used if checksum fails
       - run: sudo apt-get update && sudo apt-get install -y libpq-dev
       - run:
           name: Install dependencies
           command: bundle install --path=vendor/bundle --jobs 4 --retry 3
       - save_cache:
-          key: bundle-{{ checksum "Gemfile" }}-{{ checksum "valkyrie.gemspec" }}
+          key: bundle-{{ checksum "Gemfile" }}-{{ checksum "valkyrie.gemspec" }}-2
           paths:
             - "vendor/bundle"
       - run:
