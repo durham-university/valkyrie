@@ -70,6 +70,13 @@ RSpec.describe Valkyrie::Types do
     end
   end
 
+  describe "The INT type" do
+    it "works, but says it's deprecated" do
+      expect { Valkyrie::Types::Int[1] }.to output(/DEPRECATION/).to_stderr
+      expect { Valkyrie::Types::Coercible::Int[1] }.to output(/DEPRECATION/).to_stderr
+    end
+  end
+
   describe 'The array type' do
     it 'is not modifiable' do
       # We don't want to modify the defaults in the schema.
@@ -86,6 +93,9 @@ RSpec.describe Valkyrie::Types do
     it "returns an empty array if given an empty hash" do
       resource = Resource.new(authors: {})
       expect(resource.authors).to eq []
+    end
+    it "can have .member called on it, but will say it's deprecated" do
+      expect { Valkyrie::Types::Coercible::Array.member(Valkyrie::Types::String) }.to output(/DEPRECATION/).to_stderr
     end
   end
 

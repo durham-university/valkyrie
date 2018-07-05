@@ -47,7 +47,7 @@ module Valkyrie::Persistence::Solr
 
       def attribute_hash
         properties.each_with_object({}) do |property, hsh|
-          attr = resource_attributes[property]
+          attr = resource.__send__(property)
           mapper_val = SolrMapperValue.for(Property.new(property, attr)).result
           unless mapper_val.respond_to?(:apply_to)
             raise "Unable to cast #{resource_attributes[:internal_resource]}#" \
