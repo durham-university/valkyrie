@@ -146,7 +146,7 @@ module Valkyrie::Persistence::Solr
       class NestedObjectValue < ::Valkyrie::ValueMapper
         SolrMapperValue.register(self)
         def self.handles?(value)
-          value.value.is_a?(Hash)
+          value.value.is_a?(Hash) || value.value.is_a?(Valkyrie::Resource)
         end
 
         def result

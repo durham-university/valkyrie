@@ -132,7 +132,7 @@ module Valkyrie::Persistence::Fedora
       class NestedProperty < ::Valkyrie::ValueMapper
         FedoraValue.register(self)
         def self.handles?(value)
-          value.is_a?(Property) && value.value.is_a?(Hash) && value.value[:internal_resource]
+          value.is_a?(Property) && (value.value.is_a?(Hash) || value.value.is_a?(Valkyrie::Resource)) && value.value[:internal_resource]
         end
 
         def result
