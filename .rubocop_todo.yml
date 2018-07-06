@@ -1,3 +1,4 @@
 Metrics/ClassLength:
   Exclude:
     - 'lib/valkyrie/persistence/postgres/query_service.rb'
+    - 'lib/valkyrie/resource.rb'

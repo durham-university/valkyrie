@@ -67,7 +67,7 @@ module Valkyrie
     #   {Valkyrie::Types::Set}
     def self.attribute(name, type = Valkyrie::Types::Set.optional)
       define_method("#{name}=") do |value|
-        @attributes[name] = self.class.schema[name].call(value)
+        set_value(name, value)
       end
       super
     end
@@ -97,6 +97,10 @@ module Valkyrie
         attributes = attributes.symbolize_keys
       end
       super
+    end
+
+    def set_value(key, value)
+      @attributes[key] = self.class.schema[key].call(value)
     end
 
     # @param name [Symbol] Attribute name
@@ -157,7 +161,7 @@ module Valkyrie
     def attributes
       output = super
       nil_keys = (self.class.schema.keys - output.keys).map { |x| [x, nil] }.to_h
-      output.merge(nil_keys)
+      output.merge(nil_keys).freeze
     end
   end
 end
