@@ -50,11 +50,13 @@ module Valkyrie
       define_method("#{name}=") do |value|
         instance_variable_set("@#{name}", self.class.schema[name].call(value))
       end
+      type = type.meta(ordered: true) if name == :member_ids
       super(name, type)
     end
 
     def self.reserved_attributes
       [:id, :internal_resource, :created_at, :updated_at, :new_record]
+      super
     end
 
     # @return [ActiveModel::Name]
