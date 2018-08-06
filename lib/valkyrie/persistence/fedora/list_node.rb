@@ -9,6 +9,12 @@ module Valkyrie::Persistence::Fedora
     attr_writer :next_uri, :prev_uri
     attr_accessor :proxy_in, :proxy_for
     attr_reader :adapter
+
+    # Constructor
+    # @param [Array] node_cache
+    # @param [RDF::URI] rdf_subject
+    # @param adapter
+    # @param [RDF::Repository] graph
     def initialize(node_cache, rdf_subject, adapter, graph = RDF::Repository.new)
       @rdf_subject = rdf_subject
       @graph = graph
@@ -48,6 +54,8 @@ module Valkyrie::Persistence::Fedora
       g
     end
 
+    # The URI for the target (i. e. object of the RDF triple) of the ORE list
+    # @return [RDF::URI]
     def target_uri
       if target_id.is_a?(Valkyrie::ID)
         adapter.id_to_uri(target_id.to_s)
@@ -56,6 +64,8 @@ module Valkyrie::Persistence::Fedora
       end
     end
 
+    # The string ID for the target of the ORE list
+    # @return [String]
     def target_id
       if proxy_for.to_s.include?("/")
         adapter.uri_to_id(proxy_for)
@@ -68,13 +78,20 @@ module Valkyrie::Persistence::Fedora
 
       attr_reader :next_uri, :prev_uri, :node_cache
 
+      # Factory for the Link
       class Builder
         attr_reader :uri, :graph
+
+        # Constructor
+        # @param [URI::Generic] uri
+        # @param [RDF::Repository] graph
         def initialize(uri, graph)
           @uri = uri
           @graph = graph
         end
 
+        # Copies the structure of the ORE Link
+        # @param instance [Valkyrie::Persistence::Fedora::ListNode::Resource]
         def populate(instance)
           instance.proxy_for = resource.proxy_for.first
           instance.proxy_in = resource.proxy_in.first
@@ -84,11 +101,15 @@ module Valkyrie::Persistence::Fedora
 
         private
 
+          # Constructs the object modeling the RDF triples for the ORE List
+          # @return [Valkyrie::Persistence::Fedora::ListNode::Resource]
           def resource
             @resource ||= Resource.new(uri, data: graph)
           end
       end
 
+      # Class modeling the RDF triples for an ORE List
+      # @see
       class Resource < ActiveTriples::Resource
         property :proxy_for, predicate: ::RDF::Vocab::ORE.proxyFor, cast: false
         property :proxy_in, predicate: ::RDF::Vocab::ORE.proxyIn, cast: false

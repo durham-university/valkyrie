@@ -89,9 +89,13 @@ module Valkyrie::Persistence::Fedora
           end
         end
 
+        # Maps Fedora RDF graphs into Valkyrie IDs
         class OrderedProperty < ::Valkyrie::ValueMapper
           delegate :scope, :adapter, to: :value
           FedoraValue.register(self)
+
+          # Determines whether or not the value can be mapped
+          # @param value [RDF::URI]
           def self.handles?(value)
             value.statement.object.is_a?(RDF::URI) && value.statement.object.to_s.include?("#") &&
               (value.statement.object.to_s.start_with?("#") ||
@@ -99,6 +103,8 @@ module Valkyrie::Persistence::Fedora
               value.scope.query([value.statement.object, nil, nil]).map(&:predicate).include?(::RDF::Vocab::IANA.first)
           end
 
+          # Generates the RDF graph
+          # @return [CompositeApplicator]
           def result
             values = OrderedList.new(scope, head, tail, adapter).to_a.map(&:proxy_for)
             values = values.map do |val|
@@ -107,10 +113,14 @@ module Valkyrie::Persistence::Fedora
             CompositeApplicator.new(values)
           end
 
+          # Retrieve the initial element
+          # @return [RDF::URI]
           def head
             scope.query([value.statement.object, RDF::Vocab::IANA.first]).to_a.first.object
           end
 
+          # Retrieve the terminal element
+          # @return [RDF::URI]
           def tail
             scope.query([value.statement.object, RDF::Vocab::IANA.last]).to_a.first.object
           end

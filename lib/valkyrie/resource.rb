@@ -56,7 +56,6 @@ module Valkyrie
 
     def self.reserved_attributes
       [:id, :internal_resource, :created_at, :updated_at, :new_record]
-      super
     end
 
     # @return [ActiveModel::Name]

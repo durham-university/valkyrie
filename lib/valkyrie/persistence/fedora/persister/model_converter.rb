@@ -96,12 +96,20 @@ module Valkyrie::Persistence::Fedora
       class FedoraValue < ::Valkyrie::ValueMapper
       end
 
+      # Maps Valkyrie values to ordered RDF graphs in Fedora
       class OrderedProperties < ::Valkyrie::ValueMapper
         FedoraValue.register(self)
+
+        # Determines whether or not the value object can be mapped
+        # @param [Object] value
+        # @return [Boolean]
         def self.handles?(value)
           value.is_a?(Property) && ordered?(value) && Array(value.value).present?
         end
 
+        # Determines whether or not a Valkyrie attribute is ordered
+        # @param [Valkyrie::Persistence::Fedora::Persister::ModelConverter::Property] value
+        # @return [Boolean]
         def self.ordered?(value)
           return false unless value.resource.class.schema[value.key]
           value.resource.class.schema[value.key].meta.try(:[], :ordered)
@@ -109,16 +117,21 @@ module Valkyrie::Persistence::Fedora
 
         delegate :subject, to: :value
 
+        # Populate the ordered list, append the IANA triples referencing the initial and terminal elements of the list
+        # @return [GraphProperty]
         def result
           initialize_list
           apply_first_and_last
           GraphProperty.new(value.subject, value.key, graph, value.adapter, value.resource)
         end
 
+        # Accesses the graph object from the OrderedList
+        # @return [RDF::Graph]
         def graph
           @graph ||= ordered_list.to_graph
         end
 
+        # Append the IANA triples to the RDF graph
         def apply_first_and_last
           return if ordered_list.to_a.empty?
           graph << RDF::Statement.new(subject, predicate, node_id)
@@ -126,20 +139,28 @@ module Valkyrie::Persistence::Fedora
           graph << RDF::Statement.new(node_id, ::RDF::Vocab::IANA.last, ordered_list.tail.prev.rdf_subject)
         end
 
+        # Accesses the ID URI for the node
+        # @return [RDF::URI]
         def node_id
           @node_id ||= ordered_list.send(:new_node_subject)
         end
 
+        # Accesses the predicate URI for the node
+        # @return [RDF::URI]
         def predicate
           value.schema.predicate_for(resource: value.resource, property: value.key)
         end
 
+        # Initializes the OrderedList object using the values to construct Property objects
         def initialize_list
           Array(value.value).each_with_index do |val, index|
-            ordered_list.insert_proxy_for_at(index, calling_mapper.for(Property.new(value.subject, value.key.to_s.singularize.to_sym, val, value.adapter, value.resource)).result.value)
+            property = Property.new(value.subject, value.key.to_s.singularize.to_sym, val, value.adapter, value.resource)
+            ordered_list.insert_proxy_for_at(index, calling_mapper.for(property).result.value)
           end
         end
 
+        # Construct a OrderedList using the persistence adapter
+        # @return [OrderedList]
         def ordered_list
           @ordered_list ||= OrderedList.new(RDF::Graph.new, nil, nil, value.adapter)
         end
