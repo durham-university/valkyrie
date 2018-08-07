@@ -101,7 +101,7 @@ module Valkyrie::Persistence::Fedora
         FedoraValue.register(self)
 
         # Determines whether or not the value object can be mapped
-        # @param [Object] value
+        # @param [Valkyrie::Persistence::Fedora::Persister::ModelConverter::Property] value
         # @return [Boolean]
         def self.handles?(value)
           value.is_a?(Property) && ordered?(value) && Array(value.value).present?

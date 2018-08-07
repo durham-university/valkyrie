@@ -54,6 +54,9 @@ module Valkyrie
     end
 
     attr_reader :value, :calling_mapper
+    # Constructor
+    # @param value [Object]
+    # @param calling_mapping [Class]
     def initialize(value, calling_mapper)
       @value = value
       @calling_mapper = calling_mapper
