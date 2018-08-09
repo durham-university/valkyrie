@@ -16,12 +16,21 @@ module Valkyrie::Persistence::Postgres
 
     # @return [Class] {Valkyrie::Persistence::Postgres::QueryService}
     def query_service
-      @query_service ||= Valkyrie::Persistence::Postgres::QueryService.new(adapter: self)
+      @query_service ||= Valkyrie::Persistence::Postgres::QueryService.new(
+        resource_factory: resource_factory
+      )
     end
 
     # @return [Class] {Valkyrie::Persistence::Postgres::ResourceFactory}
     def resource_factory
-      Valkyrie::Persistence::Postgres::ResourceFactory
+      @resource_factory ||= Valkyrie::Persistence::Postgres::ResourceFactory.new(adapter: self)
+    end
+
+    def id
+      @id ||= begin
+        to_hash = "#{resource_factory.orm_class.connection_config['host']}:#{resource_factory.orm_class.connection_config['database']}"
+        Valkyrie::ID.new(Digest::MD5.hexdigest(to_hash))
+      end
     end
   end
 end

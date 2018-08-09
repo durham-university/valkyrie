@@ -11,7 +11,7 @@ RSpec.describe Valkyrie::Types do
       attribute :embargo_release_date, Valkyrie::Types::Set.of(Valkyrie::Types::DateTime).optional
       attribute :set_of_values, Valkyrie::Types::Set
       attribute :my_flag, Valkyrie::Types::Bool
-      attribute :nested_resource_array, Valkyrie::Types::Array.member(Resource.optional)
+      attribute :nested_resource_array, Valkyrie::Types::Array.of(Resource.optional)
       attribute :nested_resource_array_of, Valkyrie::Types::Array.of(Resource.optional)
       attribute :nested_resource_set, Valkyrie::Types::Set.of(Resource.optional)
     end
@@ -60,6 +60,14 @@ RSpec.describe Valkyrie::Types do
       # We don't want to modify the defaults in the schema.
       resource = Resource.new(geonames_uri: nil)
       expect(resource.geonames_uri).to be_nil
+    end
+  end
+
+  describe Valkyrie::Types::OptimisticLockToken do
+    it "casts from a string" do
+      serialized_token = Valkyrie::Persistence::OptimisticLockToken.new(adapter_id: "adapter_id", token: Valkyrie::ID.new("token")).serialize
+
+      expect(described_class[serialized_token]).to be_a Valkyrie::Persistence::OptimisticLockToken
     end
   end
 
@@ -122,6 +130,9 @@ RSpec.describe Valkyrie::Types do
     it "returns an empty array if given an empty hash" do
       resource = Resource.new(set_of_values: {})
       expect(resource.set_of_values).to eq []
+    end
+    it "can use .member" do
+      expect { Valkyrie::Types::Set.member(Valkyrie::Types::String) }.not_to raise_error
     end
   end
 

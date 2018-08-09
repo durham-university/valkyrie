@@ -7,11 +7,12 @@ module Valkyrie::Persistence::Postgres
   #
   # @see Valkyrie::Persistence::Postgres::MetadataAdapter
   class QueryService
-    attr_reader :adapter
-    delegate :resource_factory, to: :adapter
+    attr_reader :resource_factory
     delegate :orm_class, to: :resource_factory
-    def initialize(adapter:)
-      @adapter = adapter
+
+    # @note (see Valkyrie::Persistence::Memory::QueryService#initialize)
+    def initialize(resource_factory:)
+      @resource_factory = resource_factory
     end
 
     # (see Valkyrie::Persistence::Memory::QueryService#find_all)

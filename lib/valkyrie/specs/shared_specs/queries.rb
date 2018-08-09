@@ -4,14 +4,12 @@ RSpec.shared_examples 'a Valkyrie query provider' do
     raise 'adapter must be set with `let(:adapter)`' unless
       defined? adapter
     class CustomResource < Valkyrie::Resource
-      attribute :id, Valkyrie::Types::ID.optional
       attribute :alternate_ids, Valkyrie::Types::Array
       attribute :title
       attribute :member_ids, Valkyrie::Types::Array
       attribute :a_member_of
     end
     class SecondResource < Valkyrie::Resource
-      attribute :id, Valkyrie::Types::ID.optional
     end
   end
   after do
@@ -289,6 +287,26 @@ RSpec.shared_examples 'a Valkyrie query provider' do
       query_service.custom_queries.register_query_handler(QueryHandler)
       expect(query_service.custom_queries).to respond_to :find_by_user_id
       expect(query_service.custom_queries.find_by_user_id).to eq 1
+    end
+  end
+
+  context "optimistic locking" do
+    before do
+      class CustomLockingQueryResource < Valkyrie::Resource
+        enable_optimistic_locking
+        attribute :title
+      end
+    end
+    after do
+      Object.send(:remove_const, :CustomLockingQueryResource)
+    end
+
+    it "retrieves the lock token and casts it to optimistic_lock_token attribute" do
+      resource = CustomLockingQueryResource.new(title: "My Title")
+      resource = persister.save(resource: resource)
+      resource = query_service.find_by(id: resource.id)
+      # we can't know the value in the general case
+      expect(resource[Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK]).not_to be_empty
     end
   end
 end

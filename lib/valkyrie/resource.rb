@@ -4,7 +4,6 @@ module Valkyrie
   # The base resource class for all Valkyrie metadata objects.
   # @example Define a resource
   #   class Book < Valkyrie::Resource
-  #     attribute :id, Valkyrie::Types::ID.optional
   #     attribute :member_ids, Valkyrie::Types::Array
   #     attribute :author
   #   end
@@ -49,10 +48,12 @@ module Valkyrie
     def self.inherited(subclass)
       super(subclass)
       subclass.allow_nonexistent_keys
-      subclass.attribute :internal_resource, Valkyrie::Types::Any.default(subclass.to_s)
-      subclass.attribute :created_at, Valkyrie::Types::DateTime.optional
-      subclass.attribute :updated_at, Valkyrie::Types::DateTime.optional
-      subclass.attribute :new_record, Types::Bool.default(true)
+      subclass.constructor_type :schema
+      subclass.attribute :id, Valkyrie::Types::ID.optional, internal: true
+      subclass.attribute :internal_resource, Valkyrie::Types::Any.default(subclass.to_s), internal: true
+      subclass.attribute :created_at, Valkyrie::Types::DateTime.optional, internal: true
+      subclass.attribute :updated_at, Valkyrie::Types::DateTime.optional, internal: true
+      subclass.attribute :new_record, Types::Bool.default(true), internal: true
     end
 
     # @return [Array<Symbol>] Array of fields defined for this class.
@@ -60,16 +61,27 @@ module Valkyrie
       schema.keys.without(:new_record)
     end
 
-    # Define an attribute.
+    # Define an attribute. Attributes are used to describe resources.
     # @param name [Symbol]
     # @param type [Dry::Types::Type]
     # @note Overridden from {Dry::Struct} to make the default type
     #   {Valkyrie::Types::Set}
-    def self.attribute(name, type = Valkyrie::Types::Set.optional)
+    # @todo Remove ability to override built in attributes.
+    def self.attribute(name, type = Valkyrie::Types::Set.optional, internal: false)
+      if reserved_attributes.include?(name.to_sym) && schema[name] && !internal
+        warn "#{name} is a reserved attribute in Valkyrie::Resource and defined by it. You can remove your definition of `attribute :#{name}`. " \
+             "For now your version will be used, but in the next major version the type will be overridden. " \
+             "Called from #{Gem.location_of_caller.join(':')}"
+        schema.delete(name)
+      end
       define_method("#{name}=") do |value|
         set_value(name, value)
       end
-      super
+      super(name, type)
+    end
+
+    def self.reserved_attributes
+      [:id, :internal_resource, :created_at, :updated_at, :new_record]
     end
 
     # @return [ActiveModel::Name]
@@ -101,6 +113,18 @@ module Valkyrie
 
     def set_value(key, value)
       @attributes[key] = self.class.schema[key].call(value)
+    end
+
+    def self.enable_optimistic_locking
+      attribute(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK, Valkyrie::Types::Set.of(Valkyrie::Types::OptimisticLockToken))
+    end
+
+    def self.optimistic_locking_enabled?
+      schema.key?(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK)
+    end
+
+    def optimistic_locking_enabled?
+      self.class.optimistic_locking_enabled?
     end
 
     # @param name [Symbol] Attribute name

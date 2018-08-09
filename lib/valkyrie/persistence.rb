@@ -25,17 +25,24 @@ module Valkyrie
   # @see lib/valkyrie/specs/shared_specs/persister.rb
   #
   module Persistence
+    require 'valkyrie/persistence/optimistic_lock_token'
     require 'valkyrie/persistence/custom_query_container'
     require 'valkyrie/persistence/memory'
-    require 'valkyrie/persistence/postgres'
-    require 'valkyrie/persistence/solr'
-    require 'valkyrie/persistence/fedora'
     require 'valkyrie/persistence/composite_persister'
     require 'valkyrie/persistence/delete_tracking_buffer'
     require 'valkyrie/persistence/buffered_persister'
+    autoload :Postgres, 'valkyrie/persistence/postgres'
+    autoload :Solr, 'valkyrie/persistence/solr'
+    autoload :Fedora, 'valkyrie/persistence/fedora'
     class ObjectNotFoundError < StandardError
     end
     class UnsupportedDatatype < StandardError
+    end
+    class StaleObjectError < StandardError
+    end
+
+    module Attributes
+      OPTIMISTIC_LOCK = :optimistic_lock_token
     end
   end
 end

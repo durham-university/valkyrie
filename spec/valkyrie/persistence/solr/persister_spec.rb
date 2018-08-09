@@ -26,7 +26,6 @@ RSpec.describe Valkyrie::Persistence::Solr::Persister do
         end
       end
       class Resource < Valkyrie::Resource
-        attribute :id, Valkyrie::Types::ID.optional
         attribute :title, Valkyrie::Types::Set
         attribute :other_title, Valkyrie::Types::Set
       end
@@ -53,7 +52,6 @@ RSpec.describe Valkyrie::Persistence::Solr::Persister do
       raise 'persister must be set with `let(:persister)`' unless defined? persister
       class CustomResource < Valkyrie::Resource
         include Valkyrie::Resource::AccessControls
-        attribute :id, Valkyrie::Types::ID.optional
         attribute :title
         attribute :author
         attribute :member_ids
@@ -74,6 +72,31 @@ RSpec.describe Valkyrie::Persistence::Solr::Persister do
       reloaded = query_service.find_by(id: book.id)
 
       expect(reloaded.title.first[0, 19]).to eq("datetime-#{time1.to_s[0, 10]}")
+    end
+  end
+
+  describe "#save" do
+    # supplement specs from shared_specs/locking_persister with a solr-specific test
+    # The only error we catch is the 409 conflict
+    context "when updating a resource with an invalid token" do
+      before do
+        class MyLockingResource < Valkyrie::Resource
+          enable_optimistic_locking
+          attribute :title
+        end
+      end
+
+      after do
+        ActiveSupport::Dependencies.remove_constant("MyLockingResource")
+      end
+
+      it "raises an Rsolr 500 Error" do
+        resource = MyLockingResource.new(title: ["My Locked Resource"])
+        initial_resource = persister.save(resource: resource)
+        invalid_token = Valkyrie::Persistence::OptimisticLockToken.new(adapter_id: adapter.id, token: "NOT_EVEN_A_VALID_TOKEN")
+        initial_resource.send("#{Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK}=", [invalid_token])
+        expect { persister.save(resource: initial_resource) }.to raise_error(RSolr::Error::Http)
+      end
     end
   end
 end

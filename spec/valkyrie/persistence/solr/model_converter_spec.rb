@@ -9,10 +9,10 @@ RSpec.describe Valkyrie::Persistence::Solr::ModelConverter do
   let(:created_at) { Time.now.utc }
   before do
     class Resource < Valkyrie::Resource
-      attribute :id, Valkyrie::Types::ID.optional
       attribute :title, Valkyrie::Types::Set
       attribute :author, Valkyrie::Types::Set
       attribute :birthdate, Valkyrie::Types::DateTime.optional
+      attribute :creator, Valkyrie::Types::String
     end
   end
   after do
@@ -29,8 +29,12 @@ RSpec.describe Valkyrie::Persistence::Solr::ModelConverter do
                       created_at: created_at,
                       internal_resource: 'Resource',
                       title: ["Test", RDF::Literal.new("French", language: :fr)],
-                      author: ["Author"]
+                      author: ["Author"],
+                      creator: "Creator"
                     })
+  end
+  before do
+    allow(resource).to receive(:optimistic_locking_enabled?).and_return(false)
   end
 
   describe "#to_h" do
@@ -50,10 +54,19 @@ RSpec.describe Valkyrie::Persistence::Solr::ModelConverter do
         author_ssim: ["Author"],
         author_tesim: ["Author"],
         author_tsim: ["Author"],
+        author_ssi: ["Author"],
+        author_tesi: ["Author"],
+        author_tsi: ["Author"],
         created_at_dtsi: created_at.iso8601,
         internal_resource_ssim: ["Resource"],
         internal_resource_tesim: ["Resource"],
-        internal_resource_tsim: ["Resource"]
+        internal_resource_tsim: ["Resource"],
+        creator_ssim: ["Creator"],
+        creator_tesim: ["Creator"],
+        creator_tsim: ["Creator"],
+        creator_ssi: ["Creator"],
+        creator_tesi: ["Creator"],
+        creator_tsi: ["Creator"]
       )
     end
   end

@@ -11,13 +11,24 @@ module Valkyrie::Persistence::Fedora
       end
 
       def convert
-        Valkyrie::Types::Anything[attributes]
+        populate_native_lock(Valkyrie::Types::Anything[attributes])
       end
 
       def attributes
         GraphToAttributes.new(graph: graph, adapter: adapter)
                          .convert
                          .merge(id: id, new_record: false)
+      end
+
+      # Get Fedora's lastModified value from the LDP response
+      def populate_native_lock(resource)
+        return resource unless resource.respond_to?(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK)
+        lastmod = object.response_graph.first_object([nil, RDF::URI("http://fedora.info/definitions/v4/repository#lastModified"), nil])
+        return resource unless lastmod
+
+        token = Valkyrie::Persistence::OptimisticLockToken.new(adapter_id: "native-#{adapter.id}", token: DateTime.parse(lastmod.to_s).httpdate)
+        resource.send(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK) << token
+        resource
       end
 
       def id
@@ -237,6 +248,18 @@ module Valkyrie::Persistence::Fedora
           end
         end
 
+        class ValkyrieOptimisticLockToken < ::Valkyrie::ValueMapper
+          FedoraValue.register(self)
+          def self.handles?(value)
+            value.statement.object.is_a?(RDF::Literal) && value.statement.object.datatype == PermissiveSchema.optimistic_lock_token
+          end
+
+          def result
+            value.statement.object = Valkyrie::Persistence::OptimisticLockToken.new(adapter_id: value.adapter.id, token: value.statement.object.to_s)
+            calling_mapper.for(Property.new(statement: value.statement, scope: value.scope, adapter: value.adapter)).result
+          end
+        end
+
         class InternalURI < ::Valkyrie::ValueMapper
           FedoraValue.register(self)
           def self.handles?(value)
@@ -295,10 +318,17 @@ module Valkyrie::Persistence::Fedora
             @property = property
           end
 
+          # Apply as a single value by default, if there are multiple then
+          # create an array. Done to support single values - if the resource is
+          # a Set or Array then it'll cast the single value back to an array
+          # appropriately.
           def apply_to(hsh)
             return if blacklist?(key)
-            hsh[key.to_sym] ||= []
-            hsh[key.to_sym] += cast_array(values)
+            hsh[key.to_sym] = if hsh.key?(key.to_sym)
+                                Array.wrap(hsh[key.to_sym]) + cast_array(values)
+                              else
+                                values
+                              end
           end
 
           def key

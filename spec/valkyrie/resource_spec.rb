@@ -4,7 +4,6 @@ require 'spec_helper'
 RSpec.describe Valkyrie::Resource do
   before do
     class Resource < Valkyrie::Resource
-      attribute :id, Valkyrie::Types::ID.optional
       attribute :title, Valkyrie::Types::Set
     end
   end
@@ -14,7 +13,7 @@ RSpec.describe Valkyrie::Resource do
   subject(:resource) { Resource.new }
   describe "#fields" do
     it "returns all configured fields as an array of symbols" do
-      expect(Resource.fields).to eq [:internal_resource, :created_at, :updated_at, :id, :title]
+      expect(Resource.fields).to eq [:id, :internal_resource, :created_at, :updated_at, :title]
     end
   end
 
@@ -148,7 +147,77 @@ RSpec.describe Valkyrie::Resource do
     subject(:resource) { MyResource.new }
     describe "#fields" do
       it "returns all configured parent fields as an array of symbols" do
-        expect(MyResource.fields).to eq [:internal_resource, :created_at, :updated_at, :id, :title]
+        expect(MyResource.fields).to eq [:id, :internal_resource, :created_at, :updated_at, :title]
+      end
+    end
+    describe "#internal_resource" do
+      it "returns a stringified version of itself" do
+        expect(MyResource.new.internal_resource).to eq "MyResource"
+      end
+    end
+    describe "defining an internal attribute" do
+      it "warns you and changes the type" do
+        expect { MyResource.attribute(:id) }.to output(/is a reserved attribute/).to_stderr
+        expect(MyResource.schema[:id]).to eq Valkyrie::Types::Set.optional
+      end
+    end
+  end
+
+  describe "::enable_optimistic_locking" do
+    context "when it is enabled" do
+      before do
+        class MyLockingResource < Valkyrie::Resource
+          enable_optimistic_locking
+          attribute :title, Valkyrie::Types::Set
+        end
+      end
+
+      after do
+        Object.send(:remove_const, :MyLockingResource)
+      end
+
+      it "has an optimistic_lock_token attribute" do
+        resource = MyLockingResource.new(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK => "lock_token:adapter_id:a_tok:en")
+
+        expect(resource).to respond_to(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK)
+        expect(resource.optimistic_locking_enabled?).to be true
+        expect(resource.class.optimistic_locking_enabled?).to be true
+      end
+
+      describe ".#{Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK}" do
+        it "returns an empty array by default" do
+          expect(MyLockingResource.new[Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK]).to eq []
+        end
+
+        it "casts serialized tokens to OptimisticLockTokens" do
+          resource = MyLockingResource.new(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK => "lock_token:adapter_id:a_tok:en")
+
+          expect(resource[Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK][0]).to be_a Valkyrie::Persistence::OptimisticLockToken
+        end
+
+        it "returns a token if given a token" do
+          resource = MyLockingResource.new(Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK => Valkyrie::Persistence::OptimisticLockToken.deserialize("lock_token:adapter_id:a_tok:en"))
+
+          expect(resource[Valkyrie::Persistence::Attributes::OPTIMISTIC_LOCK][0]).to be_a Valkyrie::Persistence::OptimisticLockToken
+        end
+      end
+    end
+
+    context "when it is not enabled" do
+      before do
+        class MyNonlockingResource < Valkyrie::Resource
+          attribute :title, Valkyrie::Types::Set
+        end
+      end
+
+      after do
+        Object.send(:remove_const, :MyNonlockingResource)
+      end
+
+      it "does not have an optimistic_lock_token attribute" do
+        expect(MyNonlockingResource.new).not_to respond_to(:optimistic_lock_token)
+        expect(MyNonlockingResource.new.optimistic_locking_enabled?).to be false
+        expect(MyNonlockingResource.optimistic_locking_enabled?).to be false
       end
     end
   end

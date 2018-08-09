@@ -3,9 +3,11 @@ module Valkyrie
   # Namespace for Dry::Types types.
   #  Includes Dry::Types built-in types and defines custom Valkyrie types
   #
+  # Types allow your models to automatically cast attributes to the appropriate type
+  # or even fail to instantiate should you give an inappropriate type.
+  #
   # @example Use types in property definitions on a resource
   #   class Book < Valkyrie::Resource
-  #     attribute :id, Valkyrie::Types::ID.optional
   #     attribute :title, Valkyrie::Types::Set.optional  # default type if none is specified
   #     attribute :member_ids, Valkyrie::Types::Array
   #   end
@@ -37,6 +39,14 @@ module Valkyrie
         input
       end
     end
+
+    # Optimistic Lock Token
+    OptimisticLockToken =
+      Dry::Types::Definition
+      .new(::Valkyrie::Persistence::OptimisticLockToken)
+      .constructor do |input|
+        Valkyrie::Persistence::OptimisticLockToken.deserialize(input)
+      end
 
     # Used for casting {Valkyrie::Resources} if possible.
     Anything = Valkyrie::Types::Any.constructor do |value|

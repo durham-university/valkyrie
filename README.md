@@ -5,20 +5,29 @@ Valkyrie is a gem for enabling multiple backends for storage of files and metada
 [![CircleCI](https://circleci.com/gh/samvera-labs/valkyrie.svg?style=svg)](https://circleci.com/gh/samvera-labs/valkyrie)
 [![Coverage Status](https://coveralls.io/repos/github/samvera-labs/valkyrie/badge.svg?branch=master)](https://coveralls.io/github/samvera-labs/valkyrie?branch=master)
 [![Stories in Ready](https://badge.waffle.io/samvera-labs/valkyrie.png?label=ready&title=Ready)](https://waffle.io/samvera-labs/valkyrie)
+[![Yard Docs](http://img.shields.io/badge/yard-docs-blue.svg)](http://rubydoc.info/github/samvera-labs/valkyrie)
 
+## Primary Contacts
+
+### Product Owner
+
+[Carolyn Cole](https://github.com/cam156)
+
+### Technical Lead
+
+[Trey Pendragon](https://github.com/tpendragon)
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
-```ruby
-gem 'valkyrie', github: 'samvera-labs/valkyrie'
+```
+gem 'valkyrie'
 ```
 
 And then execute:
 
     $ bundle
-
 
 ## Configuration
 
@@ -29,6 +38,7 @@ configuration file that sets which options are used by default in which environm
 
 Here is a sample initializer that registers a couple adapters and storage adapters, in each case linking an
 instance with a short name that can be used to refer to it in your application:
+
 
 ```
 # frozen_string_literal: true
@@ -50,7 +60,7 @@ Rails.application.config.to_prepare do
   )
 
   Valkyrie::StorageAdapter.register(
-    Valkyrie::Storage::Fedora.new(connection: ActiveFedora.fedora.connection),
+    Valkyrie::Storage::Fedora.new(connection: Ldp::Client.new("http://localhost:8988/rest")),
     :fedora
   )
 
@@ -69,7 +79,7 @@ The initializer registers two `Valkyrie::MetadataAdapter` instances for storing 
 
 Other adapter options include `Valkyrie::Persistence::BufferedPersister` for buffering in memory before bulk
 updating another persister, `Valkyrie::Persistence::CompositePersister` for storing in more than one adapter
-at once, and `Valkyrie::Persistence::Solr` for storing in Solr.
+at once, `Valkyrie::Persistence::Solr` for storing in Solr, and `Valkyrie::Persistence::Fedora` for storing in Fedora.
 
 The initializer also registers three `Valkyrie::StorageAdapter` instances for storing files:
 * `:disk` which stores files on disk
@@ -101,8 +111,22 @@ For each environment, you must set two values:
 
 The values are the short names used in your initializer.
 
+Further details can be found on the [the Wiki](https://github.com/samvera-labs/valkyrie/wiki/Persistence).
 
 ## Usage
+
+### The Public API
+
+Valkyrie's public API is defined by the shared specs that are used to test each of its core classes.
+This include change sets, resources, persisters, adapters, and queries. When creating your own kinds of
+these kinds of classes, you should use these shared specs to test your classes for conformance to
+Valkyrie's API.
+
+When breaking changes are introduced, necessitating a major version change, the shared specs will reflect
+this. Likewise, non-breaking changes to Valkyrie can be defined as code changes that do not cause any
+errors with the current shared specs.
+
+Using the shared specs in your own models is described in more [detail](https://github.com/samvera-labs/valkyrie/wiki/Shared-Specs).
 
 ### Define a Custom Work
 
@@ -112,11 +136,12 @@ Define a custom work class:
 # frozen_string_literal: true
 class MyModel < Valkyrie::Resource
   include Valkyrie::Resource::AccessControls
-  attribute :id, Valkyrie::Types::ID.optional  # Optional to allow auto-generation of IDs
   attribute :title, Valkyrie::Types::Set       # Sets are unordered
   attribute :authors, Valkyrie::Types::Array   # Arrays are ordered
 end
 ```
+
+Defining resource attributes is explained in greater detail within the [Wiki](https://github.com/samvera-labs/valkyrie/wiki/Using-Types).
 
 #### Work Types Generator
 
@@ -153,6 +178,10 @@ objects = adapter.query_service.find_all
 Valkyrie.config.metadata_adapter.query_service.find_all_of_model(model: MyModel)
 ```
 
+The usage of `ChangeSets` in writing data are further documented [here](https://github.com/samvera-labs/valkyrie/wiki/ChangeSets-and-Dirty-Tracking).
+
+### Concurrency Support (Optimistic Locking)
+By default, it is assumed that a Valkyrie repository implementation shall use a solution supporting concurrent updates for resources (multiple resources can be updated simultaneously using a Gem such as [Sidekiq](https://github.com/mperham/sidekiq)).  In order to handle the possibility of multiple updates applied to the same resource corrupting data, Valkyrie supports optimistic locking.  For further details, please reference the [overview of optimistic locking for Valkyrie resources](https://github.com/samvera-labs/valkyrie/wiki/Optimistic-Locking).
 
 ## Installing a Development environment
 
@@ -183,7 +212,7 @@ Valkyrie.config.metadata_adapter.query_service.find_all_of_model(model: MyModel)
 
 1. `docker-machine create default`
 1. `docker-machine start default`
-1. `eval "$(docker-machine env)"
+1. `eval "$(docker-machine env)"`
 
 #### Starting the development mode dependencies
 1. Start Solr, Fedora, and PostgreSQL with `rake docker:dev:daemon` (or `rake docker:dev:up` in a separate shell to run them in the foreground)
@@ -203,6 +232,13 @@ Valkyrie.config.metadata_adapter.query_service.find_all_of_model(model: MyModel)
    * The test stack cleans up after itself on exit.
 
 The development and test stacks use fully contained virtual volumes and bind all services to different ports, so they can be running at the same time without issue.
+
+## Get Help
+
+If you have any questions regarding Valkyrie you can send a message to [the
+Samvera community tech list](mailto:samvera-tech@googlegroups.com) or the `#valkyrie`
+channel in the [Samvera community Slack
+team](https://wiki.duraspace.org/pages/viewpage.action?pageId=87460391#Getintouch!-Slack).
 
 ## License
 
